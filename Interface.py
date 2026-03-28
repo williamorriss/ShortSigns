@@ -1,21 +1,30 @@
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QMediaCaptureSession
-from keyboard import Recorder
-from datetime import timedelta
+import threading
 
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
+from PyQt6.QtCore import Qt, QPoint, QTimer
+from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
+from bindings import GestureMap
 from video import VideoFeed
-from gesture import GestureMap
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Main window")
+        self.setWindowTitle("Short Signs")
         central = QWidget()
 
         self.setCentralWidget(central)
         layout = QGridLayout(central)
+
+        #title
+        self.title = QLabel("Short Signs")
+        self.title_font = self.title.font()
+        self.title_font.setPointSize(20)
+        self.title.setFont(self.title_font)
+        layout.addWidget(self.title, 0, 0)
 
         # video
         self.video_feed = VideoFeed(800, 600)
@@ -25,17 +34,24 @@ class MainWindow(QMainWindow):
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 1, 1)
+        layout.addWidget(self.start, 2, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
-        # bindings
-        self.recorder = Recorder(duration=timedelta(seconds=5))
-        layout.addWidget(self.recorder, 2, 1)
+        self.gesture_map = GestureMap()
+        layout.addWidget(self.gesture_map, 2, 1)
 
-        # record gesture
-        self.gesture_map = GestureMap(keyboard_recorder=self.recorder)
-        self.record_gesture = QPushButton("Record Gesture")
-        self.record_gesture.setFixedSize(100,100)
-        layout.addWidget(self.record_gesture, 1, 0)
-        self.record_gesture.clicked.connect(lambda: self.gesture_map.record_gesture("test", timedelta(seconds=5)))
+        #adding the boxes on the side or smth
+        self.sliding_boxes(layout)
+
+        self.video_feed.activate()
+
+    def sliding_boxes(self,layout):
+        box_layout = QListWidget()
+        item = QListWidgetItem(box_layout)
+        add_button = QPushButton("Add shortcut")
+        add_button.setFixedSize(100,100)
+        box_layout.addItem(item)
+        box_layout.setItemWidget(item,add_button)
+
+        layout.addWidget(box_layout, 1, 1)

@@ -145,7 +145,7 @@ class VisionManager:
 
     ######################################################################
 
-    def record_gesture(self, name, hand_landmarks) -> np.ndarray:
+    def record_gesture(self, hand_landmarks) -> np.ndarray:
         features = self._get_landmark_features(hand_landmarks)
         return features
 
@@ -286,10 +286,14 @@ class VisionManager:
 
     def update_frame(self) -> QPixmap | None:
         frame = self.get_frame()
+        if frame is None:
+            return None
         landmarks = self.get_landmarkers(frame)
+        if landmarks is None:
+            return None
         bgra = self.get_annotated_frame(landmarks, frame)
         if bgra is None:
-            return
+            return None
 
         rgb = cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGB)
         h, w, ch = rgb.shape

@@ -1,8 +1,3 @@
-from datetime import timedelta
-
-import cv2
-from PyQt6.QtGui import QPixmap
-
 from PyQt6.QtWidgets import QLabel, QPushButton
 
 from CameraAI.ai_vision import VisionManager
@@ -17,18 +12,17 @@ class VideoFeed(QLabel):
         self.frame_width = frame_width
         self.frame_height = frame_height
 
-
         self.frame_timer = QTimer()
         self.frame_timer.setInterval(int(1000/60))
         self.frame_timer.timeout.connect(self._update)
         self.setFixedSize(frame_width, frame_height)
         self.setScaledContents(True)
+        self.vision = VisionManager.instance()
 
         self.record_gesture_button = QPushButton("Record Gesture")
 
     def _update(self):
-        vision = VisionManager.instance()
-        pxmap = vision.update_frame()
+        pxmap = self.vision.update_frame()
         if pxmap is not None:
             self.setPixmap(pxmap)
 
@@ -39,6 +33,3 @@ class VideoFeed(QLabel):
     def deactivate(self):
         self.active = False
         self.frame_timer.stop()
-
-    def record(self, duration: timedelta):
-        self.record_timer.start(duration.seconds * 1000)
