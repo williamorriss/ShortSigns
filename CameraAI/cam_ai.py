@@ -4,64 +4,186 @@ from mediapipe.tasks.python import vision
 import cv2
 import numpy as np
 import os
-import json
 import numpy as np
-from datetime import datetime
 
-class GestureRecorder:
+import numpy as np
+import cv2
+
+import numpy as np
+import cv2
+
+class GestureRecognizer:
     def __init__(self):
-        self.recorded_gestures = []
-        self.is_recording = False
-        self.current_gesture = []
-        self.gesture_name = ""
+        # Store gesture templates
+        self.gesture_templates = {}
         
-    def start_recording(self, gesture_name):
-        """Start recording a new gesture"""
-        self.is_recording = True
-        self.current_gesture = []
-        self.gesture_name = gesture_name
-        print(f"Recording gesture: {gesture_name}")
-    
-    def stop_recording(self):
-        """Stop recording and save the gesture"""
-        if self.current_gesture:
-            self.recorded_gestures.append({
-                'name': self.gesture_name,
-                'timestamp': datetime.now().isoformat(),
-                'frames': self.current_gesture,
-                'num_frames': len(self.current_gesture)
-            })
-            print(f"Recorded {len(self.current_gesture)} frames for '{self.gesture_name}'")
-        self.is_recording = False
-        self.current_gesture = []
-    
-    def add_frame(self, hand_landmarks, frame_shape):
-        """Add current hand positions to recording"""
-        if not self.is_recording:
-            return
+    def calculate_hand_size(self, hand_landmarks):
+        """
+        Calculate hand size as the distance from wrist to middle fingertip
+        This is used for normalization
+        """
+        wrist = hand_landmarks[0]
+        middle_tip = hand_landmarks[12]
         
-        h, w, _ = frame_shape
-        frame_data = []
+        # Calculate distance
+        dx = wrist.x - middle_tip.x
+        dy = wrist.y - middle_tip.y
+        dz = wrist.z - middle_tip.z
         
-        for landmark in hand_landmarks:
-            landmark_joints = []
-            for joint in landmark:
-                
+        hand_size = np.sqrt(dx*dx + dy*dy + dz*dz)
+        return hand_size
+    
+    def extract_features(self, hand_landmarks):
+        """
+        Extract position-invariant features from hand landmarks
+        All distances are normalized by hand size to make them scale-invariant
+        All angles are already scale-invariant
+        """
+        features = []
         
-        self.current_gesture.append(frame_data)
+        # Calculate hand size for normalization
+        hand_size = self.calculate_hand_size(hand_landmarks[0])
+        if hand_size < 0.001:  # Prevent division by zero
+            hand_size = 0.001
+        
+        # Key landmark indices
+        palm_center = 0  # Wrist
+        fingertips = [4, 8, 12, 16, 20]  # Thumb, Index, Middle, Ring, Pinky
+        knuckles = [1, 5, 9, 13, 17]  # Knuckles of each finger
+        
+        # 1. Distances from palm to each fingertip (NORMALIZED by hand size)
+        palm = hand_landmarks[0][palm_center]
+        
+        for tip in fingertips:
+            dist = self.calculate_distance_3d(palm, hand_landmarks[0][tip])
+            normalized_dist = dist / hand_size  # This makes it scale-invariant
+            features.append(normalized_dist)
+        
+        # 2. Distances between adjacent fingertips (NORMALIZED)
+        for i in range(len(fingertips) - 1):
+            dist = self.calculate_distance_3d(
+                hand_landmarks[0][fingertips[i]], 
+                hand_landmarks[0][fingertips[i+1]]
+            )
+            normalized_dist = dist / hand_size
+            features.append(normalized_dist)
+        
+        # 3. Distances from each fingertip to palm (NORMALIZED) - adding more robust features
+        for tip in fingertips:
+            dist = self.calculate_distance_3d(palm, hand_landmarks[0][tip])
+            normalized_dist = dist / hand_size
+            features.append(normalized_dist)
+        
+        # 4. Angles between fingers (these are already scale-invariant)
+        for i in range(len(fingertips)):
+            for j in range(i+1, len(fingertips)):
+                angle = self.calculate_angle_between_points(
+                    hand_landmarks[0][fingertips[i]],
+                    hand_landmarks[0][palm_center],
+                    hand_landmarks[0][fingertips[j]]
+                )
+                features.append(angle)
+        
+        # 5. Finger bend angles (how curled each finger is)
+        for tip, knuckle in zip(fingertips, knuckles):
+            # Angle between fingertip, knuckle, and palm
+            angle = self.calculate_angle_between_points(
+                hand_landmarks[0][tip],
+                hand_landmarks[0][knuckle],
+                hand_landmarks[0][palm_center]
+            )
+            features.append(angle)
+        
+        # 6. Add hand size ratio features (relative proportions)
+        # Distance from thumb to pinky normalized
+        thumb_pinky_dist = self.calculate_distance_3d(
+            hand_landmarks[0][4], hand_landmarks[0][20]
+        )
+        features.append(thumb_pinky_dist / hand_size)
+        
+        # Distance from index to ring normalized
+        index_ring_dist = self.calculate_distance_3d(
+            hand_landmarks[0][8], hand_landmarks[0][16]
+        )
+        features.append(index_ring_dist / hand_size)
+        
+        return np.array(features)
     
-    def save_to_file(self, filename="gestures.json"):
-        """Save all recorded gestures to a JSON file"""
-        with open(filename, 'w') as f:
-            json.dump(self.recorded_gestures, f, indent=2)
-        print(f"Saved {len(self.recorded_gestures)} gestures to {filename}")
+    def calculate_distance_3d(self, lm1, lm2):
+        """Calculate Euclidean distance between two landmarks"""
+        dx = lm1.x - lm2.x
+        dy = lm1.y - lm2.y
+        dz = lm1.z - lm2.z
+        return np.sqrt(dx*dx + dy*dy + dz*dz)
     
-    def load_from_file(self, filename="gestures.json"):
-        """Load recorded gestures from a file"""
-        with open(filename, 'r') as f:
-            self.recorded_gestures = json.load(f)
-        print(f"Loaded {len(self.recorded_gestures)} gestures from {filename}")
-
+    def calculate_angle_between_points(self, p1, p2, p3):
+        """
+        Calculate angle between vectors (p1->p2) and (p2->p3)
+        """
+        # Convert to vectors
+        v1 = np.array([p1.x - p2.x, p1.y - p2.y, p1.z - p2.z])
+        v2 = np.array([p3.x - p2.x, p3.y - p2.y, p3.z - p2.z])
+        
+        # Calculate angle
+        dot = np.dot(v1, v2)
+        mag1 = np.linalg.norm(v1)
+        mag2 = np.linalg.norm(v2)
+        
+        if mag1 * mag2 == 0:
+            return 0
+        
+        angle = np.arccos(np.clip(dot / (mag1 * mag2), -1.0, 1.0))
+        return angle
+    
+    def record_gesture(self, gesture_name, hand_landmarks):
+        """Record a gesture template"""
+        features = self.extract_features(hand_landmarks)
+        self.gesture_templates[gesture_name] = features
+        print(f"Recorded gesture: {gesture_name}")
+        print(f"Feature vector length: {len(features)}")
+        print(f"Sample features: {features[:5]}")  # Show first 5 features
+    
+    def recognize_gesture(self, hand_landmarks, threshold=0.5):
+        """
+        Recognize current gesture by comparing with templates
+        Lower threshold = stricter matching
+        """
+        if not self.gesture_templates:
+            return None, 1.0
+        
+        current_features = self.extract_features(hand_landmarks)
+        
+        best_match = None
+        best_score = float('inf')
+        best_distance = float('inf')
+        
+        for name, template_features in self.gesture_templates.items():
+            # Calculate Euclidean distance between feature vectors
+            distance = np.linalg.norm(current_features - template_features)
+            
+            # Also try cosine similarity for comparison
+            cosine_sim = np.dot(current_features, template_features) / (
+                np.linalg.norm(current_features) * np.linalg.norm(template_features) + 1e-8
+            )
+            
+            # Combine both metrics (optional)
+            combined_score = distance * (1 - cosine_sim)
+            
+            if distance < best_distance:
+                best_distance = distance
+                best_match = name
+                best_score = combined_score
+        
+        # Normalize score (0 = perfect match, 1 = completely different)
+        normalized_score = min(best_distance / threshold, 1.0)
+        
+        #print(f"Best match: {best_match}, distance: {best_distance:.3f}, confidence: {1-normalized_score:.2f}")
+        
+        if best_distance < threshold:
+            return best_match, normalized_score
+        else:
+            return None, normalized_score
+        
 ####################################################################
 
 # Get the directory where this script is located
@@ -162,7 +284,7 @@ def run_webcam_hand_tracker():
     print("Hand tracking started! Press 'q' to quit")
 
     # Gesture recorder
-    gesture_recorder = GestureRecorder()
+    gesture_recorder = GestureRecognizer()
     is_recording = False
     
     try:
@@ -197,12 +319,6 @@ def run_webcam_hand_tracker():
                 
                 # Draw hand landmarks if detected
                 if result.hand_landmarks:
-                    print(f"Type: {type(result.hand_landmarks)}")
-                    print(f"Length: {len(result.hand_landmarks)}")
-                    print(f"First element type: {type(result.hand_landmarks[0])}")
-                    print(f"First element length: {len(result.hand_landmarks[0]) if hasattr(result.hand_landmarks[0], '__len__') else 'not a list'}")
-                    print(f"First element coordinates: {result.hand_landmarks[0][0]}")
-
                     # Draw the landmarks
                     annotated_frame = draw_hand_landmarks(frame, result.hand_landmarks)
                     
@@ -249,15 +365,12 @@ def run_webcam_hand_tracker():
 
                 # Break loop on 'r' key to start/stop recording
                 if cv2.waitKey(1) & 0xFF == ord('r'):
-                    is_recording = not is_recording
-                    if is_recording:
-                        gesture_recorder.start_recording("New Gesture")
-                    else:
-                        gesture_recorder.stop_recording()
+                    print("Recording gestures...")
+                    gesture_recorder.record_gesture("gest", result.hand_landmarks)
 
-                # Gesture recorder
-                if is_recording:
-                    gesture_recorder.add_frame(result.hand_landmarks, annotated_frame.shape)
+                best_match, score = gesture_recorder.recognize_gesture(result.hand_landmarks)
+                if best_match is not None:
+                    print(f"Detected gesture: {best_match}, Score: {score}")
 
 
                     
