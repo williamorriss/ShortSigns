@@ -1,14 +1,11 @@
 from typing import Callable
 
-from pynput.keyboard import Key
+from pynput.keyboard import Key, KeyCode
 from pynput.keyboard import Controller as KeyboardController
-import time
 from datetime import datetime, timedelta
-import threading
 from pynput import keyboard
-from queue import Queue
-
-import threading
+import time
+from PyQt6.QtCore import QThread, pyqtSignal as Signal
 
 
 keyboard_controller = KeyboardController()
@@ -26,84 +23,44 @@ def previous():
     keyboard_controller.tap(Key.media_previous)
 
 class KeyPressEvent:
-    def __init__(self, key: Key):
+    def __init__(self, key: Key | KeyCode):
         self.key = key
         self.timestamp = datetime.now()
 
     def show_key(self) -> str:
-        """NOT ALL KEYS HAVE CHAR ATTRIBUTE (Please use this method)"""
         try:
-            return self.key.char
+            if isinstance(self.key, Key):
+                return f"special: {self.key.name}"
+            return self.key.char or f"vk:{self.key.vk}"
         except AttributeError:
-            return str(self.key)
+            return "<?>"
 
+class Recorder(QThread):
+    progress = Signal(KeyPressEvent)
+    finished = Signal(list)
 
-class Recorder:
-    def __init__(self, duration: float):
+    def __init__(self, duration: timedelta):
+        super().__init__()
         self.duration = duration
-        self.recorded = Queue()
+        self.recorded = []
 
-    def get_queue(self):
-        return self.recorded
+    def _press(self, key: Key | KeyCode | None):
+        if key is None:
+            return
+        event = KeyPressEvent(key)
+        self.progress.emit(event)
+        self.recorded.append(event)
 
-    def _press(self, key: Key, callback: Callable[[Key], None]):
-        self.recorded.append(KeyPressEvent(key))
-        cal
-
-    def record(self, duration: timedelta , callback: Callable):
+    def run(self):
         last_press = datetime.now()
 
-        def update_delta():
+        def update_last_press(_key: Key | KeyCode | None):
             nonlocal last_press
             last_press = datetime.now()
 
-        listener = keyboard_controller.Listener(on_press=self._press, on_release=update_delta)
-        listener.start()
-        while last_press - datetime.now() < duration:
-            time.sleep(0.1)
+        with keyboard.Listener(on_press=self._press, on_release=update_last_press) as listener:
+            listener.start()
+            while datetime.now() - last_press < self.duration:
+                time.sleep(0.1)
 
-        listener.stop()
-
-
-
-
-
-stop_flag = threading.Event()
-
-
-
-
-
-
-# def display_results():
-#     if not recorded_keys:
-#         print("No keys were recorded.")
-#         return
-#
-#     print(f"{'Time (s)':<12} {'Event':<10} {'Key'}")
-#     print("-" * 35)
-#
-#     start_time = recorded_keys[0][0]
-#     for ts, event, key in recorded_keys:
-#         relative_time = ts - start_time
-#         print(f"{relative_time:<12.3f} {event:<10} {key}")
-
-
-
-
-#
-# if __name__ == "__main__":
-#     try:
-#         duration = float(input("How many seconds to record? "))
-#     except ValueError:
-#         print("Invalid input. Using default of 5 seconds.")
-#         duration = 5.0
-#
-#     record_keys(duration)
-#     display_results()
-#
-# if __name__ == '__main__':
-#     start()
-#     while True:
-#         time.sleep(1)
-#         skip()
+        self.finished.emit(self.recorded)
