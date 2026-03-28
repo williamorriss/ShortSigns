@@ -4,13 +4,6 @@ from mediapipe.tasks.python import vision
 import cv2
 import numpy as np
 import os
-import numpy as np
-
-import numpy as np
-import cv2
-
-import numpy as np
-import cv2
 
 class GestureRecognizer:
     def __init__(self):
@@ -39,75 +32,81 @@ class GestureRecognizer:
         All distances are normalized by hand size to make them scale-invariant
         All angles are already scale-invariant
         """
-        features = []
+        full_features = []
+
+        for hand in hand_landmarks:
+            features = []
         
-        # Calculate hand size for normalization
-        hand_size = self.calculate_hand_size(hand_landmarks[0])
-        if hand_size < 0.001:  # Prevent division by zero
-            hand_size = 0.001
-        
-        # Key landmark indices
-        palm_center = 0  # Wrist
-        fingertips = [4, 8, 12, 16, 20]  # Thumb, Index, Middle, Ring, Pinky
-        knuckles = [1, 5, 9, 13, 17]  # Knuckles of each finger
-        
-        # 1. Distances from palm to each fingertip (NORMALIZED by hand size)
-        palm = hand_landmarks[0][palm_center]
-        
-        for tip in fingertips:
-            dist = self.calculate_distance_3d(palm, hand_landmarks[0][tip])
-            normalized_dist = dist / hand_size  # This makes it scale-invariant
-            features.append(normalized_dist)
-        
-        # 2. Distances between adjacent fingertips (NORMALIZED)
-        for i in range(len(fingertips) - 1):
-            dist = self.calculate_distance_3d(
-                hand_landmarks[0][fingertips[i]], 
-                hand_landmarks[0][fingertips[i+1]]
-            )
-            normalized_dist = dist / hand_size
-            features.append(normalized_dist)
-        
-        # 3. Distances from each fingertip to palm (NORMALIZED) - adding more robust features
-        for tip in fingertips:
-            dist = self.calculate_distance_3d(palm, hand_landmarks[0][tip])
-            normalized_dist = dist / hand_size
-            features.append(normalized_dist)
-        
-        # 4. Angles between fingers (these are already scale-invariant)
-        for i in range(len(fingertips)):
-            for j in range(i+1, len(fingertips)):
+            # Calculate hand size for normalization
+            hand_size = self.calculate_hand_size(hand)
+            if hand_size < 0.001:  # Prevent division by zero
+                hand_size = 0.001
+
+            # Key landmark indices
+            palm_center = 0  # Wrist
+            fingertips = [4, 8, 12, 16, 20]  # Thumb, Index, Middle, Ring, Pinky
+            knuckles = [1, 5, 9, 13, 17]  # Knuckles of each finger
+
+            # 1. Distances from palm to each fingertip (NORMALIZED by hand size)
+            palm = hand[palm_center]
+
+            for tip in fingertips:
+                dist = self.calculate_distance_3d(palm, hand[tip])
+                normalized_dist = dist / hand_size  # This makes it scale-invariant
+                features.append(normalized_dist)
+
+            # 2. Distances between adjacent fingertips (NORMALIZED)
+            for i in range(len(fingertips) - 1):
+                dist = self.calculate_distance_3d(
+                    hand[fingertips[i]], 
+                    hand[fingertips[i+1]]
+                )
+                normalized_dist = dist / hand_size
+                features.append(normalized_dist)
+
+            # 3. Distances from each fingertip to palm (NORMALIZED) - adding more robust features
+            for tip in fingertips:
+                dist = self.calculate_distance_3d(palm, hand[tip])
+                normalized_dist = dist / hand_size
+                features.append(normalized_dist)
+
+            # 4. Angles between fingers (these are already scale-invariant)
+            for i in range(len(fingertips)):
+                for j in range(i+1, len(fingertips)):
+                    angle = self.calculate_angle_between_points(
+                        hand[fingertips[i]],
+                        hand[palm_center],
+                        hand[fingertips[j]]
+                    )
+                    features.append(angle)
+
+            # 5. Finger bend angles (how curled each finger is)
+            for tip, knuckle in zip(fingertips, knuckles):
+                # Angle between fingertip, knuckle, and palm
                 angle = self.calculate_angle_between_points(
-                    hand_landmarks[0][fingertips[i]],
-                    hand_landmarks[0][palm_center],
-                    hand_landmarks[0][fingertips[j]]
+                    hand[tip],
+                    hand[knuckle],
+                    hand[palm_center]
                 )
                 features.append(angle)
-        
-        # 5. Finger bend angles (how curled each finger is)
-        for tip, knuckle in zip(fingertips, knuckles):
-            # Angle between fingertip, knuckle, and palm
-            angle = self.calculate_angle_between_points(
-                hand_landmarks[0][tip],
-                hand_landmarks[0][knuckle],
-                hand_landmarks[0][palm_center]
+
+            # 6. Add hand size ratio features (relative proportions)
+            # Distance from thumb to pinky normalized
+            thumb_pinky_dist = self.calculate_distance_3d(
+                hand[4], hand[20]
             )
-            features.append(angle)
+            features.append(thumb_pinky_dist / hand_size)
+
+            # Distance from index to ring normalized
+            index_ring_dist = self.calculate_distance_3d(
+                hand[8], hand[16]
+            )
+            features.append(index_ring_dist / hand_size)
+
+            features = np.array(features)
+            full_features.append(features)
         
-        # 6. Add hand size ratio features (relative proportions)
-        # Distance from thumb to pinky normalized
-        thumb_pinky_dist = self.calculate_distance_3d(
-            hand_landmarks[0][4], hand_landmarks[0][20]
-        )
-        features.append(thumb_pinky_dist / hand_size)
-        
-        # Distance from index to ring normalized
-        index_ring_dist = self.calculate_distance_3d(
-            hand_landmarks[0][8], hand_landmarks[0][16]
-        )
-        features.append(index_ring_dist / hand_size)
-        
-        return np.array(features)
+        return np.array(full_features)
     
     def calculate_distance_3d(self, lm1, lm2):
         """Calculate Euclidean distance between two landmarks"""
@@ -154,25 +153,21 @@ class GestureRecognizer:
         current_features = self.extract_features(hand_landmarks)
         
         best_match = None
-        best_score = float('inf')
         best_distance = float('inf')
         
-        for name, template_features in self.gesture_templates.items():
-            # Calculate Euclidean distance between feature vectors
-            distance = np.linalg.norm(current_features - template_features)
-            
-            # Also try cosine similarity for comparison
-            cosine_sim = np.dot(current_features, template_features) / (
-                np.linalg.norm(current_features) * np.linalg.norm(template_features) + 1e-8
-            )
-            
-            # Combine both metrics (optional)
-            combined_score = distance * (1 - cosine_sim)
-            
+        for name, hands in self.gesture_templates.items():
+            if len(hands) != len(current_features):
+                continue
+            total_distance = 0
+
+            for i, template_features in enumerate(hands):
+                # Calculate Euclidean distance between feature vectors
+                distance = np.linalg.norm(current_features[i] - template_features)              
+                total_distance += distance
+
             if distance < best_distance:
-                best_distance = distance
+                best_distance = total_distance
                 best_match = name
-                best_score = combined_score
         
         # Normalize score (0 = perfect match, 1 = completely different)
         normalized_score = min(best_distance / threshold, 1.0)
