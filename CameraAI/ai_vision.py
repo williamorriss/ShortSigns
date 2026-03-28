@@ -86,15 +86,15 @@ class VisionManager():
         # Draw hand landmarks if detected
         if landmarkers.hand_landmarks:
             # Draw the landmarks
-            annotated_frame = self.draw_hand_landmarks(frame, landmarkers.hand_landmarks)
+            annotated_frame = self._draw_hand_landmarks(frame, landmarkers.hand_landmarks)
 
             # Add finger count information
             for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
-                finger_count = self.count_fingers(hand_landmarks)
+                finger_count = self._count_fingers(hand_landmarks)
 
                 # Get wrist position for text placement
                 h, w, _ = frame.shape
-                wrist_x, wrist_y = self.to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
+                wrist_x, wrist_y = self._to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
 
                 # Display finger count
                 cv2.putText(annotated_frame, f"Fingers: {finger_count}", 
@@ -408,7 +408,7 @@ class VisionManager():
 
         for hand_landmarks in hand_landmarks_list:
             # Convert normalized landmarks to pixel coords
-            pts = [self.to_pixel(lm.x, lm.y, w, h) for lm in hand_landmarks]
+            pts = [self._to_pixel(lm.x, lm.y, w, h) for lm in hand_landmarks]
 
             if draw_connections:
                 for a, b in connections:
