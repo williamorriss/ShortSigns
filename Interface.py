@@ -1,14 +1,8 @@
-import sys
-from PyQt6.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QLabel, QVBoxLayout, QApplication
-from PyQt6.QtCore import Qt, QCoreApplication, QPermission
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
-from PyQt6.QtCore import QCameraPermission
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
 from PyQt6.QtMultimediaWidgets import QVideoWidget
-
-from keyboard import Recorder, KeyPressEvent
+from keyboard import Recorder
 from datetime import timedelta
 
 from app import App
@@ -38,6 +32,8 @@ class MainWindow(QMainWindow):
         self.start.clicked.connect(self.start_video)
 
         # bindings
+        self.recorder = Recorder(duration=timedelta(seconds=5))
+        layout.addWidget(self.recorder, 2, 1)
 
     def start_video(self):
         app = App.instance()
@@ -59,10 +55,3 @@ class MainWindow(QMainWindow):
         self.session.setCamera(self.camera)
         self.session.setVideoOutput(self.video_feed)
         self.camera.start()
-
-
-
-
-
-    def finish_recording(self):
-        pass

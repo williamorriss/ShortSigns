@@ -1,74 +1,97 @@
 from pynput.keyboard import Key, KeyCode
 from pynput.keyboard import Controller as KeyboardController
-from datetime import datetime, timedelta
 from pynput import keyboard
-import time
-from PyQt6.QtCore import QThread, pyqtSignal as Signal
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel
-
+from datetime import datetime, timedelta
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal as Signal, QElapsedTimer, QEvent
+from PyQt6.QtWidgets import QPushButton, QLabel
+import threading
+from app import App
 
 keyboard_controller = KeyboardController()
 
-def start():
-    keyboard_controller.tap(Key.media_play_pause)
+def start():    keyboard_controller.tap(Key.media_play_pause)
+def stop():     keyboard_controller.tap(Key.media_play_stop)
+def skip():     keyboard_controller.tap(Key.media_next)
+def previous(): keyboard_controller.tap(Key.media_previous)
 
-def stop():
-    keyboard_controller.tap(Key.media_play_stop)
+from PyQt6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QKeyEvent
 
-def skip():
-    keyboard_controller.tap(Key.media_next)
 
-def previous():
-    keyboard_controller.tap(Key.media_previous)
-
-class KeyPressEvent:
-    def __init__(self, key: Key | KeyCode):
-        self.key = key
-        self.timestamp = datetime.now()
-
-    def show_key(self) -> str:
-        try:
-            if isinstance(self.key, Key):
-                return f"special: {self.key.name}"
-            return self.key.char or f"vk:{self.key.vk}"
-        except AttributeError:
-            return "<?>"
-
-class Recorder(QThread):
-    progress = Signal(KeyPressEvent)
-    finished = Signal(list)
-
+class Recorder(QWidget):
     def __init__(self, duration: timedelta):
         super().__init__()
+        App.instance().installEventFilter(self)
+
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._finish)
+
         self.duration = duration
-        self.recorded = []
+        self.keys_pressed = []
 
-    def _press(self, key: Key | KeyCode | None):
-        if key is None:
-            return
-        event = KeyPressEvent(key)
-        self.progress.emit(event)
-        self.recorded.append(event)
+        self.setWindowTitle("Keyboard Listener")
+        self.setFixedSize(400, 200)
 
-    def run(self):
-        last_press = datetime.now()
+        # UI
 
-        def update_last_press(_key: Key | KeyCode | None):
-            nonlocal last_press
-            last_press = datetime.now()
+        self.start_button = QPushButton("Start")
+        self.start_button.clicked.connect(self._start)
 
-        with keyboard.Listener(on_press=self._press, on_release=update_last_press) as listener:
-            listener.start()
-            while datetime.now() - last_press < self.duration:
-                time.sleep(0.1)
+        self.status_label = QLabel(f"Listening  seconds...")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setStyleSheet("font-size: 18px; font-weight: bold;")
 
-        self.finished.emit(self.recorded)
+        self.keys_label = QLabel("Keys pressed: (none)")
+        self.keys_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.keys_label.setStyleSheet("font-size: 14px; color: #555;")
 
-class RecorderButton(QPushButton):
-    def __init__(self, recorder: Recorder):
-        super().__init__()
-        self.recorder = recorder
-    def update_recording(self, event: KeyPressEvent):
-        current_txt = self.recording_label.text()
-        new_txt = current_txt + event.show_key()
-        self.recording_label.setText(new_txt)
+        layout = QVBoxLayout()
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.keys_label)
+        self.setLayout(layout)
+
+
+    def eventFilter(self, watched_obj, event):
+        if not self._timer.isActive():
+            return super().eventFilter(watched_obj, event)
+
+
+        if event.type() == QEvent.Type.KeyPress:
+            if event.isAutoRepeat():
+                return True
+
+            key_text = event.text()
+
+            if not key_text or key_text.isspace():
+                key_name = Qt.Key(event.key()).name
+            else:
+                key_name = key_text
+
+            self.keys_pressed.append(key_name)
+            display = ", ".join(self.keys_pressed[-10:])
+            self.keys_label.setText(f"Keys pressed: {display}")
+
+            return True
+
+        return super().eventFilter(watched_obj, event)
+
+    def _start(self):
+        print("start")
+        self._timer.start(self.duration.seconds * 1000)
+
+    def _finish(self):
+        self._timer.stop()
+        print(self.keys_pressed)
+        print("finished")
+
+    def _tick(self):
+        elapsed =  timedelta(milliseconds=self.timer.elapsed())
+        delta   = self.duration - elapsed
+        remaining_s = max(delta / 1000, 0.0)
+
+        if delta.seconds > 0:
+            self.status_label.setText(f"Listening for {remaining_s:.1f} seconds...")
+        else:
+            self.timer.restart()
