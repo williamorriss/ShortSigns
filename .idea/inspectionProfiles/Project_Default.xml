@@ -4,8 +4,9 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <list>
-          <option value="pynput" />
-          <option value="pyqt6" />
+          <option value="mediapipe" />
+          <option value="numpy" />
+          <option value="opencv-python" />
         </list>
       </option>
     </inspection_tool>

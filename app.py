@@ -1,9 +1,15 @@
 import sys
 from typing import Callable
+import objc
 
 
 from PyQt6.QtCore import QCameraPermission, Qt
-from PyQt6.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QLabel, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QApplication
+
+NSBundle = objc.lookUpClass("NSBundle") # type: ignore
+bundle = NSBundle.mainBundle()
+info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+info["NSCameraUsageDescription"] = "Camera access is required."
 
 class App(QApplication):
     _instance = None
