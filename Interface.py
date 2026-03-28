@@ -1,6 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QLabel, QVBoxLayout, QApplication
 from PyQt6.QtCore import Qt, QCoreApplication
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import QCameraPermission
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
@@ -11,18 +13,21 @@ from datetime import timedelta
 
 
 class Main_Window(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Main window")
-        central = QWidget()
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-        self.video_feed = QVideoWidget()
-        layout.addWidget(self.video_feed)
-        self.start = QPushButton("Start feed")
-        layout.addWidget(self.start)
-        self.camera = None
-        self.session = QMediaCaptureSession()
+  def __init__(self):
+    super().__init__()
+    self.setWindowTitle("Main window")
+    central = QWidget()
+    self.setCentralWidget(central)
+    layout = QGridLayout(central)
+    self.video_feed = QVideoWidget()
+    self.video_feed.setFixedSize(800,500)
+    layout.addWidget(self.video_feed, 0, 1)
+    layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+    self.start = QPushButton("Start feed")
+    self.start.setFixedSize(100,100)
+    layout.addWidget(self.start, 1, 1)
+    self.camera = None
+    self.session = QMediaCaptureSession()
 
         self.start.clicked.connect(self.start_video)
 
