@@ -35,8 +35,9 @@ class Recorder(QWidget):
 
         # UI
 
-        self.start_button = QPushButton("Start")
+        self.start_button = QPushButton("Start recording inputs")
         self.start_button.clicked.connect(self._start)
+        self.start_button.setFixedSize(200,100)
 
         self.status_label = QLabel(f"Listening  seconds...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -50,6 +51,7 @@ class Recorder(QWidget):
         layout.addWidget(self.start_button)
         layout.addWidget(self.status_label)
         layout.addWidget(self.keys_label)
+        layout.setAlignment(self.start_button, Qt.AlignmentFlag.AlignHCenter)
         self.setLayout(layout)
 
 

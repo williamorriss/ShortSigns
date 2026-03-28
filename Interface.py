@@ -3,7 +3,7 @@ from queue import Queue
 
 import cv2
 from PyQt6.QtGui import QPainter, QImage, QFont
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
 from PyQt6.QtMultimediaWidgets import QVideoWidget
@@ -49,6 +49,20 @@ class MainWindow(QMainWindow):
 
         # camera
         self.vision = VisionManager()
+
+        #adding the boxes on the side or smth
+        self.sliding_boxes(layout)
+
+    def sliding_boxes(self,layout):
+        box_layout = QListWidget()
+        item = QListWidgetItem(box_layout)
+        add_button = QPushButton("Add shortcut")
+        add_button.setFixedSize(100,100)
+        box_layout.addItem(item)
+        box_layout.setItemWidget(item,add_button)
+
+        layout.addWidget(box_layout, 1, 1)
+
 
 
     def start_video(self):
