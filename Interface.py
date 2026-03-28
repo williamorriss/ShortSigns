@@ -77,7 +77,7 @@ class MainWindow(QMainWindow):
         row = QWidget()
         row_layout = QHBoxLayout(row)
         gesture = QLabel("Gesture")
-        shortcut = QLabel("Shortcut")
+        shortcut = QPushButton("Shortcut")
         name = QLabel("Name")
         gesture.setFixedSize(100,50)
         shortcut.setFixedSize(100,50)
