@@ -5,8 +5,8 @@ import numpy as np
 import cv2
 import os
 
-class vision_manager():
-    current_gesture = None
+class VisionManager():
+    saved_gestrues = {}
 
     HAND_CONNECTIONS = [
         (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
@@ -17,17 +17,24 @@ class vision_manager():
         (5, 9), (9, 13), (13, 17)              # Palm connections
     ]
 
-    def __init__(self, model_path):
+    def __init__(self, model_path=None):
         self.current_gesture = None
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(script_dir, "hand_landmarker.task")
+        # Fix: Use provided model_path or default to script directory
+        if model_path is None:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            model_path = os.path.join(script_dir, "hand_landmarker.task")
         self.model_path = model_path
+        print(self.model_path)
+        
+        # Check if model exists
+        if not os.path.exists(self.model_path):
+            print(f"Error: Model file not found at {self.model_path}")
+            raise FileNotFoundError(f"Model not found: {self.model_path}")
 
-    def run(self):
-        # Initialize the hand landmarker with VIDEO mode
+        # Create the landmarker once (not per frame)
         base_options = python.BaseOptions(model_asset_path=self.model_path)
-        options = vision.HandLandmarkerOptions(
+        self.options = vision.HandLandmarkerOptions(
             base_options=base_options,
             num_hands=2,
             min_hand_detection_confidence=0.5,
@@ -35,75 +42,170 @@ class vision_manager():
             min_tracking_confidence=0.5,
             running_mode=vision.RunningMode.VIDEO
         )
+        
+        # Create the landmarker as an instance variable (reused)
+        try:
+            self.landmarker = vision.HandLandmarker.create_from_options(self.options)
+            print("Hand landmarker created successfully")
+        except Exception as e:
+            print(f"Error creating landmarker: {e}")
+            self.landmarker = None
 
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
+        # Initialize webcam
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
             print("Error: Could not open webcam")
-            return
+            self.cap = None
+
+    def get_frame(self):
+        """Get a single frame from webcam"""
+        if self.cap is None:
+            print("Webcam not initialized")
+            return None
+            
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Error: Could not read frame")
+            return None
+        
+        # Flip horizontally for mirror view
+        frame = cv2.flip(frame, 1)
+        return frame
+    
+    def get_landmarkers(self, frame):
+        """Get hand landmarks from a frame"""
+        if self.landmarker is None:
+            print("Landmarker not initialized")
+            return None
+            
+        if frame is None:
+            print("Frame is None")
+            return None
         
         try:
-            # Create the landmarker
-            with vision.HandLandmarker.create_from_options(options) as landmarker:
-
-                while True:
-                    # Read frame from webcam
-                    ret, frame = cap.read()
-                    if not ret:
-                        print("Error: Could not read frame")
-                        break
-                    
-                    # Flip horizontally for mirror view
-                    frame = cv2.flip(frame, 1)
-
-                    # Convert BGR to RGB
-                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-                    # Create MediaPipe Image object
-                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-
-                    # Get timestamp in milliseconds
-                    timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-
-                    try:
-                        # Detect hands in the frame
-                        result = landmarker.detect_for_video(mp_image, timestamp_ms)
-                    except Exception as e:
-                        print(f"Detection error: {e}")
-                        continue
-                    
-                    self.show_camera_feed(result, frame)
-                    cv2.waitKey(1)
-
-                    """
-                    # Break loop on 'r' key to start/stop recording
-                    if cv2.waitKey(1) & 0xFF == ord('r'):
-                        print("Recording gestures...")
-                        gesture_recorder.record_gesture("gest", result.hand_landmarks)
-
-                    best_match, score = gesture_recorder.recognize_gesture(result.hand_landmarks)
-                    if best_match is not None:
-                        print(f"Detected gesture: {best_match}, Score: {score}")
-                    """
-
-
-
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Create MediaPipe Image object
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+            
+            # Get timestamp in milliseconds
+            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+            
+            # Detect hands in the frame (reuse existing landmarker)
+            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
+            return result
+            
         except Exception as e:
-            print(f"Error in tracker: {e}")
-        finally:
-            # Cleanup
-            cap.release()
-            cv2.destroyAllWindows()
+            print(f"Detection error: {e}")
+            return None
+
+    def release(self):
+        """Clean up resources"""
+        if self.cap:
+            self.cap.release()
+        if self.landmarker:
+            self.landmarker.close()
+        cv2.destroyAllWindows()
+
+    def record_gesture(self, name, landmarker):
+        try:
+            features = self._get_landmark_features(landmarker.hand_landmarks)
+            self.saved_gestures[name] = features
+            return True
+        except Exception as e:
+            print(f"Error recording gesture: {e}")
+            return False
 
     ######################################################################
 
-    def show_camera_feed(self, result, frame):
+    def _get_landmark_features(self, hand_landmarks):
+        full_features = []
+
+        for hand in hand_landmarks:
+            features = []
+        
+            # Calculate hand size for normalization
+            hand_size = self.calculate_hand_size(hand)
+            if hand_size < 0.001:  # Prevent division by zero
+                hand_size = 0.001
+
+            # Key landmark indices
+            palm_center = 0  # Wrist
+            fingertips = [4, 8, 12, 16, 20]  # Thumb, Index, Middle, Ring, Pinky
+            knuckles = [1, 5, 9, 13, 17]  # Knuckles of each finger
+
+            # 1. Distances from palm to each fingertip (NORMALIZED by hand size)
+            palm = hand[palm_center]
+
+            for tip in fingertips:
+                dist = self.calculate_distance_3d(palm, hand[tip])
+                normalized_dist = dist / hand_size  # This makes it scale-invariant
+                features.append(normalized_dist)
+
+            # 2. Distances between adjacent fingertips (NORMALIZED)
+            for i in range(len(fingertips) - 1):
+                dist = self.calculate_distance_3d(
+                    hand[fingertips[i]], 
+                    hand[fingertips[i+1]]
+                )
+                normalized_dist = dist / hand_size
+                features.append(normalized_dist)
+
+            # 3. Distances from each fingertip to palm (NORMALIZED) - adding more robust features
+            for tip in fingertips:
+                dist = self.calculate_distance_3d(palm, hand[tip])
+                normalized_dist = dist / hand_size
+                features.append(normalized_dist)
+
+            # 4. Angles between fingers (these are already scale-invariant)
+            for i in range(len(fingertips)):
+                for j in range(i+1, len(fingertips)):
+                    angle = self.calculate_angle_between_points(
+                        hand[fingertips[i]],
+                        hand[palm_center],
+                        hand[fingertips[j]]
+                    )
+                    features.append(angle)
+
+            # 5. Finger bend angles (how curled each finger is)
+            for tip, knuckle in zip(fingertips, knuckles):
+                # Angle between fingertip, knuckle, and palm
+                angle = self.calculate_angle_between_points(
+                    hand[tip],
+                    hand[knuckle],
+                    hand[palm_center]
+                )
+                features.append(angle)
+
+            # 6. Add hand size ratio features (relative proportions)
+            # Distance from thumb to pinky normalized
+            thumb_pinky_dist = self.calculate_distance_3d(
+                hand[4], hand[20]
+            )
+            features.append(thumb_pinky_dist / hand_size)
+
+            # Distance from index to ring normalized
+            index_ring_dist = self.calculate_distance_3d(
+                hand[8], hand[16]
+            )
+            features.append(index_ring_dist / hand_size)
+
+            features = np.array(features)
+            full_features.append(features)
+        
+        return np.array(full_features)
+
+    ######################################################################
+
+    def show_camera_feed(self, landmarkers, frame):
         # Draw hand landmarks if detected
-        if result.hand_landmarks:
+        if landmarkers.hand_landmarks:
             # Draw the landmarks
-            annotated_frame = self.draw_hand_landmarks(frame, result.hand_landmarks)
+            annotated_frame = self.draw_hand_landmarks(frame, landmarkers.hand_landmarks)
 
             # Add finger count information
-            for i, hand_landmarks in enumerate(result.hand_landmarks):
+            for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
                 finger_count = self.count_fingers(hand_landmarks)
 
                 # Get wrist position for text placement
@@ -116,8 +218,8 @@ class vision_manager():
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
                 # Get hand type if available
-                if result.handedness and len(result.handedness) > i:
-                    hand_type = result.handedness[i][0].category_name
+                if landmarkers.handedness and len(landmarkers.handedness) > i:
+                    hand_type = landmarkers.handedness[i][0].category_name
                     cv2.putText(annotated_frame, hand_type, 
                                (wrist_x, wrist_y - 40),
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
@@ -132,7 +234,7 @@ class vision_manager():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         # Show hand count
-        hand_count = len(result.hand_landmarks) if result.hand_landmarks else 0
+        hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
         cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 90),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
@@ -192,5 +294,11 @@ class vision_manager():
         return finger_count
     
 if __name__ == "__main__":
-    ai_vision = vision_manager("hand_landmarker.task")
-    ai_vision.run()
+    manager = VisionManager()
+    while True:
+        frame = manager.get_frame()
+        landmarkers = manager.get_landmarkers(frame)
+        manager.show_camera_feed(landmarkers, frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
