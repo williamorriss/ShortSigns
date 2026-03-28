@@ -1,11 +1,10 @@
-from typing import Callable
-
 from pynput.keyboard import Key, KeyCode
 from pynput.keyboard import Controller as KeyboardController
 from datetime import datetime, timedelta
 from pynput import keyboard
 import time
 from PyQt6.QtCore import QThread, pyqtSignal as Signal
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel
 
 
 keyboard_controller = KeyboardController()
@@ -64,3 +63,12 @@ class Recorder(QThread):
                 time.sleep(0.1)
 
         self.finished.emit(self.recorded)
+
+class RecorderButton(QPushButton):
+    def __init__(self, recorder: Recorder):
+        super().__init__()
+        self.recorder = recorder
+    def update_recording(self, event: KeyPressEvent):
+        current_txt = self.recording_label.text()
+        new_txt = current_txt + event.show_key()
+        self.recording_label.setText(new_txt)
