@@ -5,9 +5,18 @@ from pynput.keyboard import Controller, Key
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QWidget
-from httpx import URL
 
 import webbrowser
+
+
+import os, sys
+def kill():
+    if sys.platform == "win32":
+        os.system("shutdown /s /t 0")
+    elif sys.platform == "darwin":
+        os.system("sudo shutdown -h now")
+    else:  # linux
+        os.system("sudo shutdown -h now")
 
 
 class ShortcutPlayer(QWidget):
@@ -88,6 +97,9 @@ class ShortcutPlayer(QWidget):
         for k in shortcut:
             if "http" in k:
                 webbrowser.open(k)
+
+            if "kill":
+                kill()
 
             if len(k) == 1:
                 self.keyboard.press(k)
