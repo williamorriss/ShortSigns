@@ -75,18 +75,19 @@ class GestureMap(QWidget):
         self.key_status.setFont(keystatus_font)
 
         ## gesture
-        self.gesture_button = QPushButton("Capture Gesture")
-        self.gesture_button.clicked.connect(self.capture_gesture.record_gesture)
-        self.capture_gesture.binding.connect(self.build_binding.set_gesture)
-        layout.addWidget(self.gesture_button)
-        gesture_font = QFont('Times New Roman')
-        self.gesture_button.setFont(gesture_font)
-
         self.gesture_status = QLabel()
         self.capture_gesture.binding.connect(self._set_gesture_status)
         layout.addWidget(self.gesture_status)
         gesturestatus_font = QFont('Times New Roman')
         self.gesture_status.setFont(gesturestatus_font)
+
+        self.gesture_button = QPushButton("Capture Gesture")
+        self.gesture_button.clicked.connect(lambda: (self.capture_gesture.record_gesture, 
+                                                     self.gesture_status.setText("Recording Gesture")))
+        self.capture_gesture.binding.connect(self.build_binding.set_gesture)
+        layout.addWidget(self.gesture_button)
+        gesture_font = QFont('Times New Roman')
+        self.gesture_button.setFont(gesture_font)
 
         # total
         self.commit_button = QPushButton("Commit")

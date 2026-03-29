@@ -28,10 +28,10 @@ class VisionManager(QThread):
     ]
 
     @staticmethod
-    def instance(cls) -> "VisionManager":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def instance() -> "VisionManager":
+        if VisionManager._instance is None:
+            VisionManager._instance = VisionManager()
+        return VisionManager._instance
 
     def __init__(self, model_path=None, cap_no: int = 0):
         super().__init__()
