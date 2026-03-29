@@ -161,7 +161,7 @@ class VisionManager:
         for name, binding in saved_gestures.items():
             hands = binding.gesture
 
-            if len(hands) != len(current_features):
+            if len(hands) != len(current_features) or not len(hands):
                 continue
             total_distance = 0
 
