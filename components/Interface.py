@@ -1,10 +1,11 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, \
-    QHBoxLayout, QLineEdit, QGroupBox, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, QHBoxLayout, QLineEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
 from PyQt6.QtGui import QIcon, QFont, QColor
+from PyQt6.QtGui import QIcon
 from components.gesture_map import GestureMap
 from components.video import VideoFeed
+from components.camera_selector import CameraSelector
 
 
 class MainWindow(QMainWindow):
@@ -43,6 +44,8 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
+        self.camera_select = CameraSelector(self.video_feed)
+        layout.addWidget(self.camera_select, 4, 0)
 
         self.video_feed.activate()
 
@@ -52,6 +55,10 @@ class MainWindow(QMainWindow):
         box_layout = QListWidget()
         gesture_map = GestureMap()
 
+        add_button = QPushButton("Add shortcut")
+        add_button.setFixedSize(100,100)
+        button_font = QFont('Times New Roman')
+        add_button.setFont(button_font)
         for bind in gesture_map.binding.values():
             item = QListWidgetItem()
             item.setSizeHint(bind.sizeHint())
@@ -77,22 +84,3 @@ class MainWindow(QMainWindow):
         button_item.setSizeHint(button_container.sizeHint())
 
         layout.addWidget(box_layout, 1, 1)
-
-    def add_shortcut(self):
-        row = QWidget()
-        row_layout = QHBoxLayout(row)
-
-        shortcut = QPushButton("Shortcut")
-        name = QLineEdit("Name")
-
-        shortcut.setFixedSize(100,50)
-        name.setFixedSize(100,50)
-        row_layout.addWidget(name)
-        row_layout.addWidget(shortcut)
-
-        item = QListWidgetItem()
-        item.setSizeHint(row.sizeHint())
-        # insert before the last item (the button)
-        button_index = self.box_layout.count() - 1
-        self.box_layout.insertItem(button_index, item)
-        self.box_layout.setItemWidget(item, row)

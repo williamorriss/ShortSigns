@@ -68,6 +68,7 @@ class VisionManager:
             self.cap = None
 
     def set_source(self, cap_no: int):
+        self.cap.release()
         self.cap = cv2.VideoCapture(cap_no)
 
     @staticmethod
