@@ -81,11 +81,11 @@ class CameraSelector(QWidget):
         # Status label
         self.status = QLabel("Nothing selected")
         self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status.setFont(QFont("Georgia", 11))
+        self.status.setFont(QFont("Times New Roman", 11))
         self.status.setStyleSheet("color: #888; font-style: italic;")
         root.addWidget(self.status)
 
-        self.setStyleSheet("background-color: #fafafa;")
+        self.setStyleSheet("background-color: black;")
 
     # ── Selection logic ──────────────────────────────────────────────────────
 
@@ -126,7 +126,7 @@ class CameraSelector(QWidget):
         else:
             btn.setStyleSheet("""
                 QPushButton {
-                    background-color: white;
+                    background-color: black;
                     color: #333;
                     border: 1px solid #ddd;
                     border-radius: 8px;

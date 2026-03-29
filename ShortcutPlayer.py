@@ -1,12 +1,26 @@
+from mediapipe.tasks.python.components.containers import landmark
+
 from components.bindings import BindingManager
-from CameraAI.ai_vision import VisionManager
+from CameraAI.ai_vision import VisionManager, HandLandmarkerResult, Annotated
 
 from pynput.keyboard import Controller, Key
 
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import QTimer, QObject
 
-class ShortcutPlayer(QWidget):
+import webbrowser
+
+
+import os, sys
+def kill():
+    if sys.platform == "win32":
+        os.system("shutdown /s /t 0")
+    elif sys.platform == "darwin":
+        os.system("sudo shutdown -h now")
+    else:  # linux
+        os.system("sudo shutdown -h now")
+
+
+class ShortcutPlayer(QObject):
     KEY_MAP = {
             # Media keys (correct names)
             "Key_VolumeMute": Key.media_volume_mute,
@@ -15,7 +29,7 @@ class ShortcutPlayer(QWidget):
             "Key_PlayPause": Key.media_play_pause,
             "Key_Next": Key.media_next,
             "Key_Prev": Key.media_previous,
-            "Key_Stop": Key.media_stop,
+            # "Key_Stop": Key.media_stop,
             
             # Modifier keys
             "Key_Ctrl": Key.ctrl,
@@ -45,21 +59,15 @@ class ShortcutPlayer(QWidget):
     def __init__(self, binding_manager: BindingManager):
         super().__init__()
 
-        self.hide()
-
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.regonise_play_shortcut)
-        self.timer.start(10)
-
         self.keyboard = Controller()
         self.binding_manager = binding_manager
         self.vision_manager = VisionManager.instance()
+        self.vision_manager.annotated_frame_ready.connect(self.regonise_play_shortcut)
 
         self.previous_gesture_name = None
 
-    def regonise_play_shortcut(self) -> bool:
-        frame = self.vision_manager.get_frame()
-        landmarkers = self.vision_manager.get_landmarkers(frame)
+    def regonise_play_shortcut(self, t: Annotated):
+        frame, landmarkers = t.get()
         if landmarkers is None:
             return False
 
@@ -82,6 +90,12 @@ class ShortcutPlayer(QWidget):
     def _play_shortcut(self, shortcut: list[str]):
         presses = []
         for k in shortcut:
+            if "http" in k:
+                webbrowser.open(k)
+
+            if "kill":
+                kill()
+
             if len(k) == 1:
                 self.keyboard.press(k)
                 presses.append(k)

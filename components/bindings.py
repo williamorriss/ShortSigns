@@ -4,18 +4,14 @@ from json import JSONDecodeError
 
 from PyQt6.QtCore import pyqtSignal as Signal
 import numpy as np
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
-from PyQt6.QtGui import QFont
-from components.capture.gesture import GestureCapture
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit, QGroupBox
+from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QLabel, QLineEdit, QGroupBox
 from CameraAI.ai_vision import Gesture
 from PyQt6.QtWidgets import QWidget
 from components.capture.shortcut import ShortCut
 
 type StoredGesture = list[int]
 
-type BindingDict = dict[str, "Binding"]
+type BindingDict = dict[str, Binding]
 
 type StoredBinding = dict[str, dict[str, StoredBinding | ShortCut]]
 
