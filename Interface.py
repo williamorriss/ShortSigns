@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
 
         # video
         self.video_feed = VideoFeed(800, 600)
-        layout.addWidget(self.video_feed, 0, 1)
+        layout.addWidget(self.video_feed, 1, 0)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # start feed
