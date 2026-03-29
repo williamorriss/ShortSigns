@@ -98,12 +98,6 @@ class VisionManager(QThread):
             self.cap.release()
         self.cap = cv2.VideoCapture(cap_no)
 
-    @staticmethod
-    def instance() -> "VisionManager":
-        if VisionManager._instance is None:
-            VisionManager._instance = VisionManager()
-        return VisionManager._instance
-
     def release(self):
         """Clean up resources"""
         if self.cap:
