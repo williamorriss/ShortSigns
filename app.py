@@ -19,18 +19,21 @@ def on_permission_result(self, permission: QCameraPermission, callback: Callable
         self.get_camera_permission()
 
 if __name__ == "__main__":
-    if sys.platform == "darwin":
-        import objc
-        NSBundle = objc.lookUpClass("NSBundle") # type: ignore
-        bundle = NSBundle.mainBundle()
-        info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
-        info["NSCameraUsageDescription"] = "Camera access is required."
+    try:
+        if sys.platform == "darwin":
+            import objc
+            NSBundle = objc.lookUpClass("NSBundle") # type: ignore
+            bundle = NSBundle.mainBundle()
+            info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+            info["NSCameraUsageDescription"] = "Camera access is required."
 
-    app = QApplication(sys.argv)
-    app.setStyleSheet("""
-        QLabel {color: #f0ead6}
-                      """)
-    window = MainWindow()
-    window.show()
-    get_camera_permission(app)
-    app.exec()
+        app = QApplication(sys.argv)
+        app.setStyleSheet("""
+            QLabel {color: #f0ead6}
+                          """)
+        window = MainWindow()
+        window.show()
+        get_camera_permission(app)
+        app.exec()
+    except Exception as e:
+        print(e)

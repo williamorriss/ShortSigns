@@ -1,5 +1,4 @@
 import time
-from dataclasses import dataclass
 
 import mediapipe as mp
 from PyQt6.QtCore import QThread, pyqtSignal as Signal
@@ -9,45 +8,9 @@ from mediapipe.tasks.python import vision
 import numpy as np
 import cv2
 import os
-from copy import deepcopy
 
 type Frame = np.ndarray
 type Gesture = np.ndarray
-
-
-@dataclass
-class Landmark:
-    x: float
-    y: float
-    z: float
-
-@dataclass
-class Handedness:
-    category_name: str
-    score: float
-
-@dataclass
-class HandLandmarkerResult:
-    hand_landmarks: list[list[Landmark]]
-    handedness: list[list[Handedness]]
-
-    @staticmethod
-    def from_mediapipe(result) -> "HandLandmarkerResult | None":
-        if result is None:
-            return None
-        return HandLandmarkerResult(
-            hand_landmarks=[
-                [Landmark(lm.x, lm.y, lm.z) for lm in hand]
-                for hand in result.hand_landmarks
-            ],
-            handedness=[
-                [Handedness(h.category_name, h.score) for h in hand]
-                for hand in result.handedness
-            ]
-        )
-
-
-
 
 class VisionManager(QThread):
     landmarks_ready = Signal(object)
