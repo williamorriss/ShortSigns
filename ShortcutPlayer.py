@@ -3,8 +3,8 @@ from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
 
-from PyQt6.QtCore import QTimer, QEvent, Qt, QObject
-from PyQt6.QtWidgets import QWidget, QApplication, QPushButton, QVBoxLayout, QLabel, QLineEdit
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QWidget
 
 class ShortcutPlayer(QWidget):
     def __init__(self, gesture_map: GestureMap):
@@ -14,7 +14,7 @@ class ShortcutPlayer(QWidget):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.regonise_play_shortcut)
-        self.timer.start(100)
+        self.timer.start(10)
 
         self.keyboard = Controller()
         self.gesture_map = gesture_map

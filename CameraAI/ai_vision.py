@@ -169,6 +169,7 @@ class VisionManager:
 
             for i, template_features in enumerate(hands):
                 # Calculate Euclidean distance between feature vectors
+                distance = best_distance
                 distance = np.linalg.norm(current_features[i] - template_features)              
                 total_distance += distance
 
