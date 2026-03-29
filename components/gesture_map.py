@@ -34,7 +34,7 @@ class GestureMap(QWidget):
         # UI
         ## name
         self.name_field = QLineEdit()
-        self.name_field.setText("")
+        self.name_field.setText("Input the name of the keybind here")
         self.name_field.textChanged.connect(self.build_binding.set_name)
         layout.addWidget(self.name_field)
         name_font = QFont('Times New Roman')
