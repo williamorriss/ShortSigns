@@ -8,7 +8,7 @@ import cv2
 import os
 
 
-from numpy import ndarray
+type Gesture = np.ndarray
 
 
 class VisionManager:
@@ -87,7 +87,7 @@ class VisionManager:
 
     ######################################################################
 
-    def get_frame(self) -> np.ndarray | None:
+    def get_frame(self) -> Gesture | None:
         """Get a single frame from webcam"""
         if self.cap is None:
             print("Webcam not initialized")
@@ -102,7 +102,7 @@ class VisionManager:
         frame = cv2.flip(frame, 1)
         return frame
     
-    def get_annotated_frame(self, landmarkers, frame) -> np.ndarray | None:
+    def get_annotated_frame(self, landmarkers, frame) -> Gesture | None:
         # Draw hand landmarks if detected
         if landmarkers.hand_landmarks:
             # Draw the landmarks
@@ -144,7 +144,7 @@ class VisionManager:
 
     ######################################################################
 
-    def record_gesture(self, hand_landmarks) -> np.ndarray:
+    def record_gesture(self, hand_landmarks) -> Gesture | None:
         features = self._get_landmark_features(hand_landmarks)
         return features
 
@@ -181,74 +181,6 @@ class VisionManager:
             return best_match, normalized_score
         else:
             return None, normalized_score
-
-    ######################################################################
-
-    def save_gestures_to_json(self, file_path=None):
-        try:
-            if file_path is None:
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                file_path = os.path.join(script_dir, "saved_gestures.json")
-
-            # Convert numpy arrays to lists for JSON serialization
-            serializable_data = {}
-            for gesture_name, gesture_data in self.saved_gestures.items():
-                if isinstance(gesture_data, np.ndarray):
-                    serializable_data[gesture_name] = gesture_data.tolist()
-                elif isinstance(gesture_data, dict):
-                    # Handle nested dictionaries (for multiple samples)
-                    serializable_data[gesture_name] = {}
-                    for key, value in gesture_data.items():
-                        if isinstance(value, np.ndarray):
-                            serializable_data[gesture_name][key] = value.tolist()
-                        else:
-                            serializable_data[gesture_name][key] = value
-                else:
-                    serializable_data[gesture_name] = gesture_data
-
-            with open(file_path, 'w') as f:
-                json.dump(serializable_data, f, indent=4)
-            print(f"Gestures saved to {file_path}")
-            return True
-        except Exception as e:
-            print(f"Error saving gestures to json: {e}")
-            return False
-
-    def load_gestures_from_json(self, file_path=None):
-        try:
-            if file_path is None:
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                file_path = os.path.join(script_dir, "saved_gestures.json")
-
-            with open(file_path, 'r') as f:
-                loaded_data = json.load(f)
-
-            # Convert lists back to numpy arrays
-            self.saved_gestures = {}
-            for gesture_name, gesture_data in loaded_data.items():
-                if isinstance(gesture_data, list):
-                    # If it's a list, convert back to numpy array
-                    self.saved_gestures[gesture_name] = np.array(gesture_data)
-                elif isinstance(gesture_data, dict):
-                    # If it's a dictionary, check for numpy arrays inside
-                    self.saved_gestures[gesture_name] = {}
-                    for key, value in gesture_data.items():
-                        if isinstance(value, list):
-                            self.saved_gestures[gesture_name][key] = np.array(value)
-                        else:
-                            self.saved_gestures[gesture_name][key] = value
-                else:
-                    self.saved_gestures[gesture_name] = gesture_data
-
-            print(f"Loaded {len(self.saved_gestures)} gestures from {file_path}")
-            return True
-        except FileNotFoundError:
-            print(f"File {file_path} not found. Starting with empty gestures.")
-            self.saved_gestures = {}
-            return False
-        except Exception as e:
-            print(f"Error loading gestures from json: {e}")
-            return False
 
     ######################################################################
 
