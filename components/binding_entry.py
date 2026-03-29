@@ -1,5 +1,5 @@
 import numpy as np
-from bindings import Binding, BindingManager
+from components.bindings import Binding, BindingManager
 
 class BuildGestureEntry:
     def __init__(

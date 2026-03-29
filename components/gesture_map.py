@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
 from components.capture.gesture import GestureCapture
 from CameraAI.ai_vision import Gesture
 
-from bindings import BindingManager
+from components.bindings import BindingManager
 from components.capture.shortcut import BindingCapture, ShortCut
 
 from components.binding_entry import BuildGestureEntry
