@@ -21,7 +21,7 @@ class ShortcutPlayer(QWidget):
             "Key_Ctrl": Key.ctrl,
             "Key_Alt": Key.alt,
             "Key_Shift": Key.shift,
-            "Key_Cmd": Key.cmd,
+            "Key_Meta": Key.cmd,
             
             # Navigation keys
             "Key_Space": Key.space,
@@ -80,10 +80,11 @@ class ShortcutPlayer(QWidget):
         return True
 
     def _play_shortcut(self, shortcut: list[str]):
+        presses = []
         for k in shortcut:
             if len(k) == 1:
                 self.keyboard.press(k)
-                self.keyboard.release(k)
+                presses.append(k)
             else:
                 # Check mapping first
                 if k in self.KEY_MAP:
@@ -95,6 +96,9 @@ class ShortcutPlayer(QWidget):
                 if special:
                     print(f"Playing key: {special}")
                     self.keyboard.press(special)
-                    self.keyboard.release(special)
+                    presses.append(special)
                 else:
                     print(f"Unknown key: {k}")
+
+        for k in presses:
+            self.keyboard.release(k)
