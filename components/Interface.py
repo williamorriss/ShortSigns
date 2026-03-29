@@ -1,8 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, QHBoxLayout, QLineEdit
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, \
+    QHBoxLayout, QLineEdit, QGroupBox, QVBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
 from PyQt6.QtGui import QIcon
-from components.bindings import GestureMap
+from components.gesture_map import GestureMap
 from components.video import VideoFeed
 
 
@@ -36,39 +37,48 @@ class MainWindow(QMainWindow):
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
-        self.gesture_map = GestureMap()
-        layout.addWidget(self.gesture_map, 2, 1)
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
 
         self.video_feed.activate()
 
-    def sliding_boxes(self,layout):
-        #the item is so that the button can be added into the list widget
-        self.box_layout = QListWidget()
-        item = QListWidgetItem(self.box_layout)
 
-        add_button = QPushButton("Add shortcut")
-        add_button.setFixedSize(100,100)
-        add_button.clicked.connect(self.add_shortcut)
 
-        #this is so the add button can be centered
+    def sliding_boxes(self, layout):
+        box_layout = QListWidget()
+        gesture_map = GestureMap()
+
+        for bind in gesture_map.binding.values():
+            item = QListWidgetItem()
+            item.setSizeHint(bind.sizeHint())
+            box_layout.addItem(item)
+            box_layout.setItemWidget(item, bind)
+            bind.deleted.connect(lambda name, i=item: (
+                box_layout.takeItem(box_layout.row(i))
+            ))
+
+        # Button container
         button_container = QWidget()
         container_layout = QHBoxLayout(button_container)
-        container_layout.addWidget(add_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)  # align the layout itself
+        container_layout.addWidget(gesture_map)
 
-        item.setSizeHint(button_container.sizeHint())
-        self.box_layout.addItem(item)
-        self.box_layout.setItemWidget(item,button_container)
 
-        layout.addWidget(self.box_layout, 1, 1)
+        button_item = QListWidgetItem()
+        box_layout.addItem(button_item)
+        box_layout.setItemWidget(button_item, button_container)
+
+        # Force a proper size hint after the widget is set
+        button_container.adjustSize()
+        button_item.setSizeHint(button_container.sizeHint())
+
+        layout.addWidget(box_layout, 1, 1)
 
     def add_shortcut(self):
         row = QWidget()
         row_layout = QHBoxLayout(row)
 
-        gesture = QLabel("Gesture")
         shortcut = QPushButton("Shortcut")
         name = QLineEdit("Name")
 

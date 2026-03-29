@@ -1,4 +1,5 @@
 import numpy as np
+from bindings import Binding, BindingManager
 
 class BuildGestureEntry:
     def __init__(
@@ -38,3 +39,12 @@ class BuildGestureEntry:
         self.name = None
         self.gesture = None
         self.shortcut = None
+
+    def add_to_manager(self, manager: BindingManager):
+        assert self.all_set()
+        manager.add_value(Binding(
+            name=self.name,
+            gesture=self.gesture,
+            shortcut=self.shortcut,
+            manager=manager,
+        ))
