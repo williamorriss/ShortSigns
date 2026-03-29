@@ -1,5 +1,6 @@
 import json
 from collections.abc import dict_values
+from json import JSONDecodeError
 
 from PyQt6.QtCore import pyqtSignal as Signal
 import numpy as np
@@ -33,7 +34,7 @@ class BindingManager:
             return
 
         from functools import reduce
-        data = reduce(lambda x, y: x | y.to_dict(), self.bindings.values())
+        data = reduce(lambda x, y: x | y, map(lambda x : x.to_stored(), self.bindings.values()))
         json.dump(data, open("maps.json", "w"))
 
     def values(self) -> dict_values[Binding]:
@@ -51,7 +52,10 @@ class BindingManager:
             print(self.bindings)
 
         except FileNotFoundError:
-            print("ahh")
+            self.bindings = {}
+
+        except JSONDecodeError:
+            self.bindings = {}
 
 class Binding(QWidget):
     deleted = Signal(object)
