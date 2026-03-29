@@ -57,7 +57,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.shortcut_player, 2, 2)
 
     def sliding_boxes(self, layout, gesture_map):
-        print("doing sliding boxes")
         box_layout = QListWidget()
 
         add_button = QPushButton("Add shortcut")
