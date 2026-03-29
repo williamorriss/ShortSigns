@@ -17,7 +17,7 @@ class Annotated:
         self.frame = frame
         self.landmarks = landmarks
 
-    def get(self) -> tuple[Frame,Frame]:
+    def get(self) -> tuple[Frame,object]:
         return (self.frame, self.landmarks)
 
 

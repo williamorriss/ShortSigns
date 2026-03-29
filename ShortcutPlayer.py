@@ -1,13 +1,9 @@
-from time import sleep
-
-
 from components.bindings import BindingManager
 from CameraAI.ai_vision import VisionManager, Frame, Annotated
 from pynput.keyboard import Controller, Key
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QObject
 
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QWidget
+
 KEY_MAP = {
     # Media keys (correct names)
     "Key_VolumeMute": Key.media_volume_mute,
@@ -42,7 +38,7 @@ KEY_MAP = {
     "Key_Right": Key.right,
 }
 
-class ShortcutWorker(QThread):
+class Shortcuter(QObject):
     def __init__(self, binding_manager: BindingManager):
         super().__init__()
         self.keyboard = Controller()
@@ -56,7 +52,8 @@ class ShortcutWorker(QThread):
 
     def _frame(self, t: Annotated):
         frame, landmarkers = t.get()
-        if landmarkers is None:
+        if landmarkers is None or not landmarkers.hand_landmarks:
+            self.previous_gesture_name = None  # reset when hand leaves frame
             return False
 
         name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks)

@@ -52,9 +52,22 @@ class GestureMap(QWidget):
         self.capture_binding.binding.connect(self.build_binding.set_shortcut)
         self.keys_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.keys_label.setStyleSheet("font-size: 14px; color: #555;")
-        layout.addWidget(self.keys_label)
         keylabel_font = QFont('Times New Roman')
         self.keys_label.setFont(keylabel_font)
+
+
+        self.QLabel = QLabel("website:")
+        self.QLabel.setFont(keylabel_font)
+        layout.addWidget(self.QLabel)
+
+        self.website_entry = QLineEdit()
+        self.website_entry.setText("")
+        self.website_entry.textChanged.connect(self.keys_label.setText)
+        self.website_entry.textChanged.connect(lambda x : self.build_binding.set_shortcut([x]))
+        name_font = QFont('Times New Roman')
+        self.website_entry.setFont(name_font)
+        layout.addWidget(self.website_entry)
+        layout.addWidget(self.keys_label)
 
         self.key_status = QLabel()
         self.capture_binding.update.connect(self._set_shortcut_status)
