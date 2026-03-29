@@ -5,6 +5,7 @@ from PyQt6.QtCore import QCameraPermission, Qt
 from PyQt6.QtWidgets import QApplication
 from CameraAI.ai_vision import VisionManager
 from components.Interface import MainWindow
+from PyQt6.QtGui import QFont
 
 def get_camera_permission(self):
     permission = QCameraPermission()
@@ -26,6 +27,9 @@ if __name__ == "__main__":
         info["NSCameraUsageDescription"] = "Camera access is required."
 
     app = QApplication(sys.argv)
+    app.setStyleSheet("""
+        QLabel {color: #f0ead6}
+                      """)
     window = MainWindow()
     window.show()
     get_camera_permission(app)

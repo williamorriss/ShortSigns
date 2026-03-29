@@ -1,11 +1,13 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, \
-    QHBoxLayout, QLineEdit, QGroupBox, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, QHBoxLayout, QLineEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
+from PyQt6.QtGui import QIcon, QFont, QColor
 from PyQt6.QtGui import QIcon
 from components.gesture_map import GestureMap
 from components.video import VideoFeed
 from ShortcutPlayer import ShortcutPlayer
+from components.camera_selector import CameraSelector
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -13,15 +15,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Short Signs")
         central = QWidget()
 
+
         self.setCentralWidget(central)
         layout = QGridLayout(central)
+        self.setStyleSheet("background-color: #1c1c1c")
         #app icon
-        self.setWindowIcon(QIcon("skeleton_left.png"))
+        self.setWindowIcon(QIcon("components/skeleton_left.png"))
 
         #title
         self.title = QLabel("Short Signs")
-        self.title_font = self.title.font()
-        self.title_font.setPointSize(20)
+        self.title_font = QFont('Sitka Display', 20)
         self.title.setFont(self.title_font)
         layout.addWidget(self.title, 0, 0)
 
@@ -36,11 +39,15 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.start, 3, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
+        start_font = QFont('Times New Roman')
+        self.start.setFont(start_font)
 
 
         #adding the boxes on the side or smth
-        self.gesture_map: GestureMap = GestureMap()
-        self.sliding_boxes(layout, self.gesture_map)
+        self.gesture_map = GestureMap()
+        self.sliding_boxes(layout)
+        self.camera_select = CameraSelector(self.video_feed)
+        layout.addWidget(self.camera_select, 4, 0)
 
         self.video_feed.activate()
 
@@ -51,6 +58,10 @@ class MainWindow(QMainWindow):
     def sliding_boxes(self, layout, gesture_map):
         box_layout = QListWidget()
 
+        add_button = QPushButton("Add shortcut")
+        add_button.setFixedSize(100,100)
+        button_font = QFont('Times New Roman')
+        add_button.setFont(button_font)
         for bind in gesture_map.binding.values():
             item = QListWidgetItem()
             item.setSizeHint(bind.sizeHint())
@@ -76,22 +87,3 @@ class MainWindow(QMainWindow):
         button_item.setSizeHint(button_container.sizeHint())
 
         layout.addWidget(box_layout, 1, 1)
-
-    def add_shortcut(self):
-        row = QWidget()
-        row_layout = QHBoxLayout(row)
-
-        shortcut = QPushButton("Shortcut")
-        name = QLineEdit("Name")
-
-        shortcut.setFixedSize(100,50)
-        name.setFixedSize(100,50)
-        row_layout.addWidget(name)
-        row_layout.addWidget(shortcut)
-
-        item = QListWidgetItem()
-        item.setSizeHint(row.sizeHint())
-        # insert before the last item (the button)
-        button_index = self.box_layout.count() - 1
-        self.box_layout.insertItem(button_index, item)
-        self.box_layout.setItemWidget(item, row)
