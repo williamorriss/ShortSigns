@@ -54,7 +54,10 @@ class GestureMap(QWidget):
 
         ## gesture
         self.gesture_button = QPushButton("Capture Gesture")
-        self.gesture_button.clicked.connect(self.capture_gesture.record_gesture)
+        self.gesture_button.clicked.connect(lambda: (
+                self.gesture_status.setText("Setting Gesture..."),
+                self.capture_gesture.record_gesture()
+            ))
         self.capture_gesture.binding.connect(self.build_binding.set_gesture)
         layout.addWidget(self.gesture_button)
 
