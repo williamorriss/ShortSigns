@@ -45,6 +45,7 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.gesture_map = GestureMap()
+        self.gesture_map.signal_comit.connect(lambda: self.sliding_boxes(layout, self.gesture_map))
         self.sliding_boxes(layout, self.gesture_map)
         self.camera_select = CameraSelector(self.video_feed)
         layout.addWidget(self.camera_select, 4, 0)
@@ -56,6 +57,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.shortcut_player, 2, 2)
 
     def sliding_boxes(self, layout, gesture_map):
+        print("doing sliding boxes")
         box_layout = QListWidget()
 
         add_button = QPushButton("Add shortcut")

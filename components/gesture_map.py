@@ -3,6 +3,7 @@ import json
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
+from PyQt6.QtCore import pyqtSignal as Signal
 from components.capture.gesture import GestureCapture
 from CameraAI.ai_vision import Gesture
 
@@ -16,6 +17,8 @@ type StoredGesture = list[int]
 type StoredBinding = dict[str, dict[str, StoredBinding | ShortCut]]
 
 class GestureMap(QWidget):
+    signal_comit = Signal()
+
     def __init__(self):
         super().__init__()
         self.binding: BindingManager = BindingManager()
@@ -82,5 +85,6 @@ class GestureMap(QWidget):
         print("COMMIT")
         try:
             self.build_binding.add_to_manager(self.binding)
+            self.signal_comit.emit()
         except Exception as e:
             return
