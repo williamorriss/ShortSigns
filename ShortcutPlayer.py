@@ -7,6 +7,41 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QWidget
 
 class ShortcutPlayer(QWidget):
+    KEY_MAP = {
+            # Media keys (correct names)
+            "Key_VolumeMute": Key.media_volume_mute,
+            "Key_VolumeDown": Key.media_volume_down,
+            "Key_VolumeUp": Key.media_volume_up,
+            "Key_PlayPause": Key.media_play_pause,
+            "Key_Next": Key.media_next,
+            "Key_Prev": Key.media_previous,
+            "Key_Stop": Key.media_stop,
+            
+            # Modifier keys
+            "Key_Ctrl": Key.ctrl,
+            "Key_Alt": Key.alt,
+            "Key_Shift": Key.shift,
+            "Key_Cmd": Key.cmd,
+            
+            # Navigation keys
+            "Key_Space": Key.space,
+            "Key_Enter": Key.enter,
+            "Key_Tab": Key.tab,
+            "Key_Esc": Key.esc,
+            "Key_Backspace": Key.backspace,
+            "Key_Delete": Key.delete,
+            "Key_Home": Key.home,
+            "Key_End": Key.end,
+            "Key_PageUp": Key.page_up,
+            "Key_PageDown": Key.page_down,
+            
+            # Arrow keys
+            "Key_Up": Key.up,
+            "Key_Down": Key.down,
+            "Key_Left": Key.left,
+            "Key_Right": Key.right,
+        }
+
     def __init__(self, binding_manager: BindingManager):
         super().__init__()
 
@@ -50,7 +85,16 @@ class ShortcutPlayer(QWidget):
                 self.keyboard.press(k)
                 self.keyboard.release(k)
             else:
-                special = getattr(Key, k, None)
+                # Check mapping first
+                if k in self.KEY_MAP:
+                    special = self.KEY_MAP[k]
+                else:
+                    # Try direct conversion
+                    special = getattr(Key, k.lower().replace("key_", ""), None)
+                
                 if special:
+                    print(f"Playing key: {special}")
                     self.keyboard.press(special)
                     self.keyboard.release(special)
+                else:
+                    print(f"Unknown key: {k}")
